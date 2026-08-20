@@ -1,0 +1,23 @@
+{
+  "id": "com.example.hermes.weather",
+  "displayName": "Example Weather",
+  "versionCode": 1,
+  "versionName": "1.0.0",
+  "author": "Example Publisher",
+  "signatureFingerprint": "REPLACE_WITH_64_HEX_SHA256",
+  "capabilities": [
+    {
+      "name": "weather",
+      "description": "Read weather for a user-selected location.",
+      "toolDescriptors": []
+    }
+  ],
+  "permissions": [
+    {
+      "type": "NETWORK",
+      "rationale": "The module needs network access to retrieve weather data.",
+      "custom": null
+    }
+  ],
+  "minAppVersion": 1
+}
