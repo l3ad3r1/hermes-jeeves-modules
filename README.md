@@ -15,6 +15,8 @@ examples/                        # starter manifest and service examples
 
 The empty [`catalog-v1.json`](catalog-v1.json) is a valid starting catalog. Do not point
 the apps at a catalog until every listed artifact is available at its final HTTPS URL.
+For a smoke test, paste this raw URL into either app's Modules setting:
+`https://raw.githubusercontent.com/l3ad3r1/hermes-jeeves-modules/main/catalog-v1.json`.
 
 ## Create a module
 
@@ -66,4 +68,3 @@ An HTTPS URL and checksum protect transport integrity, not publisher trust. Herm
 Jeeves inspect the downloaded APK and bind approval to the exact plugin ID, version,
 digest, signer, and permission list. Treat catalog edits and signing keys as release
 operations, review them, and never publish credentials in this repository.
-
