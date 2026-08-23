@@ -1,0 +1,50 @@
+{
+  "id": "date-math",
+  "name": "Date Math",
+  "version": "1.0.0",
+  "author": "Hermes",
+  "description": "Works out the gap between two dates, or shifts a date by days.",
+  "type": "tool",
+  "permissions": [],
+  "tools": [
+    {
+      "name": "date_diff",
+      "description": "Calculate the number of days, weeks and hours between two dates.",
+      "category": "productivity",
+      "parameters": [
+        {
+          "name": "from",
+          "type": "STRING",
+          "description": "Start date, e.g. 2026-01-31",
+          "required": true
+        },
+        {
+          "name": "to",
+          "type": "STRING",
+          "description": "End date, e.g. 2026-03-15",
+          "required": true
+        }
+      ]
+    },
+    {
+      "name": "date_add",
+      "description": "Add (or subtract, with a negative number) a number of days to a date.",
+      "category": "productivity",
+      "parameters": [
+        {
+          "name": "date",
+          "type": "STRING",
+          "description": "Base date, e.g. 2026-01-31",
+          "required": true
+        },
+        {
+          "name": "days",
+          "type": "NUMBER",
+          "description": "Days to add; negative subtracts",
+          "required": true
+        }
+      ]
+    }
+  ],
+  "main": "\nfunction parseDate(s) {\n  var d = new Date(s);\n  return isNaN(d.getTime()) ? null : d;\n}\n\nhermes.registerTool('date_diff', function (args) {\n  var a = parseDate(String(args.from || ''));\n  var b = parseDate(String(args.to || ''));\n  if (!a || !b) { return 'Provide two dates the parser understands, for example 2026-01-31.'; }\n  var ms = Math.abs(b.getTime() - a.getTime());\n  var days = Math.floor(ms / 86400000);\n  var weeks = Math.floor(days / 7);\n  return 'Difference: ' + days + ' days (' + weeks + ' weeks and ' + (days % 7) + ' days)' +\n    '\\nHours: ' + Math.floor(ms / 3600000);\n});\n\nhermes.registerTool('date_add', function (args) {\n  var base = parseDate(String(args.date || ''));\n  var days = parseInt(args.days, 10);\n  if (!base) { return 'Provide a date the parser understands, for example 2026-01-31.'; }\n  if (isNaN(days)) { return 'Provide a whole number of days.'; }\n  var out = new Date(base.getTime() + days * 86400000);\n  return out.toISOString().slice(0, 10);\n});\n"
+}

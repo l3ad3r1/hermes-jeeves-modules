@@ -1,0 +1,25 @@
+{
+  "id": "word-count",
+  "name": "Word Count",
+  "version": "1.0.0",
+  "author": "Hermes",
+  "description": "Counts words, characters, and sentences, and estimates reading time.",
+  "type": "tool",
+  "permissions": [],
+  "tools": [
+    {
+      "name": "word_count",
+      "description": "Count words, characters and sentences in text and estimate reading time. Use when asked how long a piece of text is.",
+      "category": "productivity",
+      "parameters": [
+        {
+          "name": "text",
+          "type": "STRING",
+          "description": "The text to analyse",
+          "required": true
+        }
+      ]
+    }
+  ],
+  "main": "\nhermes.registerTool('word_count', function (args) {\n  var text = String(args.text || '');\n  if (!text) { return 'No text provided.'; }\n  var words = text.split(/\\s+/).filter(function (w) { return w.length > 0; });\n  var sentences = text.split(/[.!?]+/).filter(function (s) { return s.trim().length > 0; });\n  var minutes = Math.max(1, Math.round(words.length / 200));\n  return 'Words: ' + words.length +\n    '\\nCharacters: ' + text.length +\n    '\\nCharacters (no spaces): ' + text.replace(/\\s/g, '').length +\n    '\\nSentences: ' + sentences.length +\n    '\\nReading time: about ' + minutes + ' min';\n});\n"
+}

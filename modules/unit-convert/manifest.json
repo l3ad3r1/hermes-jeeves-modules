@@ -1,0 +1,37 @@
+{
+  "id": "unit-convert",
+  "name": "Unit Converter",
+  "version": "1.0.0",
+  "author": "Hermes",
+  "description": "Converts length, mass, and temperature units.",
+  "type": "tool",
+  "permissions": [],
+  "tools": [
+    {
+      "name": "unit_convert",
+      "description": "Convert between units of length (km, m, cm, mm, mi, ft, in, yd), mass (kg, g, mg, lb, oz), or temperature (c, f).",
+      "category": "information",
+      "parameters": [
+        {
+          "name": "value",
+          "type": "NUMBER",
+          "description": "The numeric value to convert",
+          "required": true
+        },
+        {
+          "name": "from",
+          "type": "STRING",
+          "description": "Unit to convert from",
+          "required": true
+        },
+        {
+          "name": "to",
+          "type": "STRING",
+          "description": "Unit to convert to",
+          "required": true
+        }
+      ]
+    }
+  ],
+  "main": "\nvar UNITS = {\n  km: 1000, m: 1, cm: 0.01, mm: 0.001, mi: 1609.344, ft: 0.3048, in: 0.0254, yd: 0.9144\n};\nvar MASS = { kg: 1, g: 0.001, mg: 0.000001, lb: 0.45359237, oz: 0.028349523125 };\n\nhermes.registerTool('unit_convert', function (args) {\n  var value = parseFloat(args.value);\n  var from = String(args.from || '').toLowerCase();\n  var to = String(args.to || '').toLowerCase();\n  if (isNaN(value)) { return 'Provide a numeric value.'; }\n\n  if (from === 'c' && to === 'f') { return (value * 9 / 5 + 32).toFixed(2) + ' F'; }\n  if (from === 'f' && to === 'c') { return ((value - 32) * 5 / 9).toFixed(2) + ' C'; }\n\n  var table = null;\n  if (UNITS[from] && UNITS[to]) { table = UNITS; }\n  else if (MASS[from] && MASS[to]) { table = MASS; }\n  if (!table) {\n    return 'Cannot convert ' + from + ' to ' + to +\n      '. Supported: length (km, m, cm, mm, mi, ft, in, yd), mass (kg, g, mg, lb, oz), temperature (c, f).';\n  }\n  var result = value * table[from] / table[to];\n  return value + ' ' + from + ' = ' + parseFloat(result.toFixed(6)) + ' ' + to;\n});\n"
+}

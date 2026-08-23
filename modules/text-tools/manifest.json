@@ -1,0 +1,39 @@
+{
+  "id": "text-tools",
+  "name": "Text Tools",
+  "version": "1.0.0",
+  "author": "Hermes",
+  "description": "Changes text case and makes URL slugs.",
+  "type": "tool",
+  "permissions": [],
+  "tools": [
+    {
+      "name": "text_transform",
+      "description": "Transform text: upper, lower, title case, reverse, URL slug, or strip extra whitespace.",
+      "category": "productivity",
+      "parameters": [
+        {
+          "name": "text",
+          "type": "STRING",
+          "description": "The text to transform",
+          "required": true
+        },
+        {
+          "name": "operation",
+          "type": "STRING",
+          "description": "One of: upper, lower, title, reverse, slug, strip",
+          "required": true,
+          "enumValues": [
+            "upper",
+            "lower",
+            "title",
+            "reverse",
+            "slug",
+            "strip"
+          ]
+        }
+      ]
+    }
+  ],
+  "main": "\nfunction toTitleCase(s) {\n  return s.replace(/\\w\\S*/g, function (t) {\n    return t.charAt(0).toUpperCase() + t.substr(1).toLowerCase();\n  });\n}\n\nhermes.registerTool('text_transform', function (args) {\n  var text = String(args.text || '');\n  var op = String(args.operation || '').toLowerCase();\n  if (!text) { return 'No text provided.'; }\n  switch (op) {\n    case 'upper': return text.toUpperCase();\n    case 'lower': return text.toLowerCase();\n    case 'title': return toTitleCase(text);\n    case 'reverse': return text.split('').reverse().join('');\n    case 'slug':\n      return text.toLowerCase().trim()\n        .replace(/[^a-z0-9\\s-]/g, '')\n        .replace(/[\\s_-]+/g, '-')\n        .replace(/^-+|-+$/g, '');\n    case 'strip':\n      return text.replace(/\\s+/g, ' ').trim();\n    default:\n      return 'Unknown operation \"' + op + '\". Use one of: upper, lower, title, reverse, slug, strip.';\n  }\n});\n"
+}

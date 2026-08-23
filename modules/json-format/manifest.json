@@ -1,0 +1,31 @@
+{
+  "id": "json-format",
+  "name": "JSON Formatter",
+  "version": "1.0.0",
+  "author": "Hermes",
+  "description": "Pretty-prints and validates JSON.",
+  "type": "tool",
+  "permissions": [],
+  "tools": [
+    {
+      "name": "json_format",
+      "description": "Validate and pretty-print a JSON string. Reports the parse error when the JSON is invalid.",
+      "category": "productivity",
+      "parameters": [
+        {
+          "name": "text",
+          "type": "STRING",
+          "description": "The JSON text to format",
+          "required": true
+        },
+        {
+          "name": "indent",
+          "type": "NUMBER",
+          "description": "Indent width, default 2",
+          "required": false
+        }
+      ]
+    }
+  ],
+  "main": "\nhermes.registerTool('json_format', function (args) {\n  var text = String(args.text || '');\n  if (!text) { return 'No JSON provided.'; }\n  try {\n    var parsed = JSON.parse(text);\n    var indent = parseInt(args.indent, 10);\n    if (isNaN(indent)) { indent = 2; }\n    return JSON.stringify(parsed, null, indent);\n  } catch (e) {\n    return 'Invalid JSON: ' + e.message;\n  }\n});\n"
+}

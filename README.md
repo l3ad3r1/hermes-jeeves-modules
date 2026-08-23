@@ -11,7 +11,31 @@ before it can be staged.
 catalog-v1.json                 # the URL entered under Settings → Features → Modules
 artifacts/<package>/<version>/  # immutable APK release artifacts
 examples/                        # starter manifest and service examples
+modules/<name>/                  # source trees for the featured modules (see below)
 ```
+
+## Featured modules
+
+Five in-app agent tools were generated from the productivity features ported into the Hermes
+app (domain model + repository interface + Room entity/DAO + tool + Hilt binding). Each lives
+under [`modules/`](modules/) with its own README, source tree, and Room migration SQL.
+
+| Module | Tool | Capability | DB migration | README |
+|--------|------|------------|--------------|--------|
+| [notes](modules/notes/) | `notes` — knowledge capture, markdown notes | `notes` | 13 → 14 | [README](modules/notes/README.md) |
+| [todo](modules/todo/) | `todo` — personal tasks with due dates (distinct from kanban) | `todo` | 14 → 15 | [README](modules/todo/README.md) |
+| [calendar](modules/calendar/) | `calendar` — events, writes to device calendar via `CalendarEventGateway` | `calendar` | 15 → 16 | [README](modules/calendar/README.md) |
+| [bookmarks](modules/bookmarks/) | `bookmarks` — save/search URLs and links | `bookmarks` | 16 → 17 | [README](modules/bookmarks/README.md) |
+| [mood](modules/mood/) | `mood` — daily mood logging + insights | `mood` | 16 → 17 | [README](modules/mood/README.md) |
+
+The `bookmarks` and `mood` modules share the single `MIGRATION_16_17` (both tables are created in
+one migration). `calendar` requires `READ_CALENDAR`/`WRITE_CALENDAR` runtime permissions and a
+`CalendarEventGateway` binding in the host app.
+
+Each module must be registered in the host before it is usable: add the Room entity/DAO to
+`HermesDatabase`, the migration to `DatabaseModule.addMigrations(...)`, the tool to
+`di/ToolsModule`, the capability grant to `AgentToolAccess`, and mention it in the persona
+prompts.
 
 The empty [`catalog-v1.json`](catalog-v1.json) is a valid starting catalog. Do not point
 the apps at a catalog until every listed artifact is available at its final HTTPS URL.

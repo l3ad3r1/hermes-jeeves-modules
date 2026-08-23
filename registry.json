@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 1,
+  "plugins": [
+    {
+      "id": "word-count",
+      "name": "Word Count",
+      "version": "1.0.0",
+      "author": "Hermes",
+      "description": "Counts words, characters, and sentences, and estimates reading time.",
+      "type": "tool",
+      "permissions": [],
+      "manifestUrl": "https://raw.githubusercontent.com/l3ad3r1/hermes-jeeves-modules/main/modules/word-count/manifest.json"
+    },
+    {
+      "id": "text-tools",
+      "name": "Text Tools",
+      "version": "1.0.0",
+      "author": "Hermes",
+      "description": "Changes text case and makes URL slugs.",
+      "type": "tool",
+      "permissions": [],
+      "manifestUrl": "https://raw.githubusercontent.com/l3ad3r1/hermes-jeeves-modules/main/modules/text-tools/manifest.json"
+    },
+    {
+      "id": "unit-convert",
+      "name": "Unit Converter",
+      "version": "1.0.0",
+      "author": "Hermes",
+      "description": "Converts length, mass, and temperature units.",
+      "type": "tool",
+      "permissions": [],
+      "manifestUrl": "https://raw.githubusercontent.com/l3ad3r1/hermes-jeeves-modules/main/modules/unit-convert/manifest.json"
+    },
+    {
+      "id": "date-math",
+      "name": "Date Math",
+      "version": "1.0.0",
+      "author": "Hermes",
+      "description": "Works out the gap between two dates, or shifts a date by days.",
+      "type": "tool",
+      "permissions": [],
+      "manifestUrl": "https://raw.githubusercontent.com/l3ad3r1/hermes-jeeves-modules/main/modules/date-math/manifest.json"
+    },
+    {
+      "id": "json-format",
+      "name": "JSON Formatter",
+      "version": "1.0.0",
+      "author": "Hermes",
+      "description": "Pretty-prints and validates JSON.",
+      "type": "tool",
+      "permissions": [],
+      "manifestUrl": "https://raw.githubusercontent.com/l3ad3r1/hermes-jeeves-modules/main/modules/json-format/manifest.json"
+    }
+  ]
+}
