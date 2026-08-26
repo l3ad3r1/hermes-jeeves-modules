@@ -126,6 +126,85 @@ hermes.registerTool('json_format', function (args) {
 });
 """
 
+DAILY_DIGEST_JS = """
+hermes.registerTool('daily_digest', function (args) {
+  var todos = JSON.parse(hermes.data.read('todos', '') || '[]');
+  var notes = JSON.parse(hermes.data.read('notes', '') || '[]');
+  var bookmarks = JSON.parse(hermes.data.read('bookmarks', '') || '[]');
+  var now = Date.now();
+
+  var open = todos.filter(function (t) { return !t.done; });
+  var overdue = open.filter(function (t) { return t.dueDateMs != null && t.dueDateMs < now; });
+  var highPriority = open.filter(function (t) {
+    return (t.priority === 'HIGH' || t.priority === 'CRITICAL') && (t.dueDateMs == null || t.dueDateMs >= now);
+  });
+  var starred = notes.filter(function (n) { return n.starred; });
+  var recentBookmarks = bookmarks.slice(0, 5);
+
+  if (open.length === 0 && starred.length === 0 && recentBookmarks.length === 0) {
+    return 'Nothing notable today: no open todos, starred notes, or bookmarks.';
+  }
+
+  var lines = [];
+  lines.push('Daily digest: ' + open.length + ' open todo(s), ' + overdue.length + ' overdue.');
+  if (overdue.length > 0) {
+    lines.push('Overdue:');
+    overdue.forEach(function (t) { lines.push('  • ' + t.title); });
+  }
+  if (highPriority.length > 0) {
+    lines.push('High priority (not overdue):');
+    highPriority.forEach(function (t) { lines.push('  • ' + t.title); });
+  }
+  if (starred.length > 0) {
+    lines.push('Starred notes:');
+    starred.forEach(function (n) { lines.push('  • ' + n.title); });
+  }
+  if (recentBookmarks.length > 0) {
+    lines.push('Recent bookmarks:');
+    recentBookmarks.forEach(function (b) { lines.push('  • ' + (b.title || b.url)); });
+  }
+  return lines.join('\\n');
+});
+"""
+
+WEATHER_JS = """
+function weatherCodeText(code) {
+  var map = {
+    0: 'Clear sky', 1: 'Mainly clear', 2: 'Partly cloudy', 3: 'Overcast',
+    45: 'Fog', 48: 'Depositing rime fog',
+    51: 'Light drizzle', 53: 'Moderate drizzle', 55: 'Dense drizzle',
+    61: 'Slight rain', 63: 'Moderate rain', 65: 'Heavy rain',
+    71: 'Slight snow', 73: 'Moderate snow', 75: 'Heavy snow',
+    80: 'Slight rain showers', 81: 'Moderate rain showers', 82: 'Violent rain showers',
+    95: 'Thunderstorm', 96: 'Thunderstorm with slight hail', 99: 'Thunderstorm with heavy hail'
+  };
+  return map[code] || ('Weather code ' + code);
+}
+
+hermes.registerTool('weather', function (args) {
+  var city = String(args.city || '').trim();
+  if (!city) { return 'Provide a city name.'; }
+
+  var geoUrl = 'https://geocoding-api.open-meteo.com/v1/search?count=1&name=' + encodeURIComponent(city);
+  var geo;
+  try { geo = JSON.parse(hermes.http.get(geoUrl)); } catch (e) { return 'Could not look up "' + city + '": bad response from the geocoder.'; }
+  if (!geo.results || geo.results.length === 0) { return 'Could not find a location named "' + city + '".'; }
+  var loc = geo.results[0];
+
+  var forecastUrl = 'https://api.open-meteo.com/v1/forecast?latitude=' + loc.latitude +
+    '&longitude=' + loc.longitude +
+    '&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m&temperature_unit=celsius';
+  var wx;
+  try { wx = JSON.parse(hermes.http.get(forecastUrl)); } catch (e) { return 'Could not fetch weather for ' + loc.name + '.'; }
+  var cur = wx.current;
+  if (!cur) { return 'No current weather data for ' + loc.name + '.'; }
+
+  var place = loc.name + (loc.admin1 ? ', ' + loc.admin1 : '') + (loc.country ? ', ' + loc.country : '');
+  return place + ': ' + weatherCodeText(cur.weather_code) + ', ' + cur.temperature_2m + '\\u00B0C, humidity ' +
+    cur.relative_humidity_2m + '%, wind ' + cur.wind_speed_10m + ' km/h.';
+});
+"""
+
 MODULES = [
     {
         "id": "word-count",
@@ -246,6 +325,44 @@ MODULES = [
             },
         ],
         "main": JSON_FORMAT_JS,
+    },
+    {
+        "id": "daily-digest",
+        "name": "Daily Digest",
+        "version": "1.0.0",
+        "author": "Hermes",
+        "description": "Summarizes overdue/high-priority todos, starred notes, and recent bookmarks into one digest.",
+        "type": "tool",
+        "permissions": ["data.read"],
+        "tools": [
+            {
+                "name": "daily_digest",
+                "description": "Produce a short summary of what's outstanding: overdue and high-priority todos, starred notes, and recently saved bookmarks. Use when the user asks what's on their plate, for a daily summary, or 'what am I missing'.",
+                "category": "productivity",
+                "parameters": [],
+            },
+        ],
+        "main": DAILY_DIGEST_JS,
+    },
+    {
+        "id": "weather",
+        "name": "Weather",
+        "version": "1.0.0",
+        "author": "Hermes",
+        "description": "Current weather conditions for a city, via the free open-meteo.com API.",
+        "type": "tool",
+        "permissions": ["network"],
+        "tools": [
+            {
+                "name": "weather",
+                "description": "Get current weather conditions (temperature, humidity, wind, sky) for a named city.",
+                "category": "information",
+                "parameters": [
+                    {"name": "city", "type": "STRING", "description": "City name, e.g. 'Hyderabad' or 'London, UK'", "required": True},
+                ],
+            },
+        ],
+        "main": WEATHER_JS,
     },
 ]
 

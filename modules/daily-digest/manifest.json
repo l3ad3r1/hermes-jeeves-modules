@@ -1,0 +1,20 @@
+{
+  "id": "daily-digest",
+  "name": "Daily Digest",
+  "version": "1.0.0",
+  "author": "Hermes",
+  "description": "Summarizes overdue/high-priority todos, starred notes, and recent bookmarks into one digest.",
+  "type": "tool",
+  "permissions": [
+    "data.read"
+  ],
+  "tools": [
+    {
+      "name": "daily_digest",
+      "description": "Produce a short summary of what's outstanding: overdue and high-priority todos, starred notes, and recently saved bookmarks. Use when the user asks what's on their plate, for a daily summary, or 'what am I missing'.",
+      "category": "productivity",
+      "parameters": []
+    }
+  ],
+  "main": "\nhermes.registerTool('daily_digest', function (args) {\n  var todos = JSON.parse(hermes.data.read('todos', '') || '[]');\n  var notes = JSON.parse(hermes.data.read('notes', '') || '[]');\n  var bookmarks = JSON.parse(hermes.data.read('bookmarks', '') || '[]');\n  var now = Date.now();\n\n  var open = todos.filter(function (t) { return !t.done; });\n  var overdue = open.filter(function (t) { return t.dueDateMs != null && t.dueDateMs < now; });\n  var highPriority = open.filter(function (t) {\n    return (t.priority === 'HIGH' || t.priority === 'CRITICAL') && (t.dueDateMs == null || t.dueDateMs >= now);\n  });\n  var starred = notes.filter(function (n) { return n.starred; });\n  var recentBookmarks = bookmarks.slice(0, 5);\n\n  if (open.length === 0 && starred.length === 0 && recentBookmarks.length === 0) {\n    return 'Nothing notable today: no open todos, starred notes, or bookmarks.';\n  }\n\n  var lines = [];\n  lines.push('Daily digest: ' + open.length + ' open todo(s), ' + overdue.length + ' overdue.');\n  if (overdue.length > 0) {\n    lines.push('Overdue:');\n    overdue.forEach(function (t) { lines.push('  • ' + t.title); });\n  }\n  if (highPriority.length > 0) {\n    lines.push('High priority (not overdue):');\n    highPriority.forEach(function (t) { lines.push('  • ' + t.title); });\n  }\n  if (starred.length > 0) {\n    lines.push('Starred notes:');\n    starred.forEach(function (n) { lines.push('  • ' + n.title); });\n  }\n  if (recentBookmarks.length > 0) {\n    lines.push('Recent bookmarks:');\n    recentBookmarks.forEach(function (b) { lines.push('  • ' + (b.title || b.url)); });\n  }\n  return lines.join('\\n');\n});\n"
+}

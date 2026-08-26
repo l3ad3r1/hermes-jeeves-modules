@@ -50,6 +50,30 @@
       "type": "tool",
       "permissions": [],
       "manifestUrl": "https://raw.githubusercontent.com/l3ad3r1/hermes-jeeves-modules/main/modules/json-format/manifest.json"
+    },
+    {
+      "id": "daily-digest",
+      "name": "Daily Digest",
+      "version": "1.0.0",
+      "author": "Hermes",
+      "description": "Summarizes overdue/high-priority todos, starred notes, and recent bookmarks into one digest.",
+      "type": "tool",
+      "permissions": [
+        "data.read"
+      ],
+      "manifestUrl": "https://raw.githubusercontent.com/l3ad3r1/hermes-jeeves-modules/main/modules/daily-digest/manifest.json"
+    },
+    {
+      "id": "weather",
+      "name": "Weather",
+      "version": "1.0.0",
+      "author": "Hermes",
+      "description": "Current weather conditions for a city, via the free open-meteo.com API.",
+      "type": "tool",
+      "permissions": [
+        "network"
+      ],
+      "manifestUrl": "https://raw.githubusercontent.com/l3ad3r1/hermes-jeeves-modules/main/modules/weather/manifest.json"
     }
   ]
 }

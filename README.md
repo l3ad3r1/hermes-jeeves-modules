@@ -53,10 +53,12 @@ docs/CREATING_MODULES.md          # the how-to guide
 | [unit-convert](modules/unit-convert/) | `unit_convert` | Length, mass, and temperature conversion |
 | [date-math](modules/date-math/) | `date_diff`, `date_add` | Gap between two dates, or shift a date by N days |
 | [json-format](modules/json-format/) | `json_format` | Pretty-print/validate JSON |
+| [daily-digest](modules/daily-digest/) | `daily_digest` | Overdue/high-priority todos, starred notes, recent bookmarks in one summary (`data.read`) |
+| [weather](modules/weather/) | `weather` | Current conditions for a city, via the free open-meteo.com API (`network`) |
 
-All five declare `permissions: []` — each predates the host implementation below and never
-needed updating, since pure-computation modules don't need permissions anyway. Nothing stops
-a new module from declaring `data.read`, `data.write`, or `network` now.
+The first five declare `permissions: []` — pure computation, no host access needed.
+`daily-digest` and `weather` are the first two modules in this repo that actually exercise
+the permission-gated host APIs described below.
 
 ## Host-backed permissions are implemented
 
@@ -75,9 +77,8 @@ a new module from declaring `data.read`, `data.write`, or `network` now.
   module never opens its own socket), response capped at 32,000 characters so one module
   can't blow a whole turn's context budget.
 
-No module in this repo currently uses any of these — all five are still pure computation —
-but new ones can now declare `data.read`/`data.write`/`network` and expect the calls to
-actually work end to end, not just be approved and silently do nothing.
+`daily-digest` (`data.read`) and `weather` (`network`) exercise these end to end; the
+original five stay pure computation, needing nothing beyond their own arguments.
 
 ## Add a module
 

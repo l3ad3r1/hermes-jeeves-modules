@@ -1,0 +1,27 @@
+{
+  "id": "weather",
+  "name": "Weather",
+  "version": "1.0.0",
+  "author": "Hermes",
+  "description": "Current weather conditions for a city, via the free open-meteo.com API.",
+  "type": "tool",
+  "permissions": [
+    "network"
+  ],
+  "tools": [
+    {
+      "name": "weather",
+      "description": "Get current weather conditions (temperature, humidity, wind, sky) for a named city.",
+      "category": "information",
+      "parameters": [
+        {
+          "name": "city",
+          "type": "STRING",
+          "description": "City name, e.g. 'Hyderabad' or 'London, UK'",
+          "required": true
+        }
+      ]
+    }
+  ],
+  "main": "\nfunction weatherCodeText(code) {\n  var map = {\n    0: 'Clear sky', 1: 'Mainly clear', 2: 'Partly cloudy', 3: 'Overcast',\n    45: 'Fog', 48: 'Depositing rime fog',\n    51: 'Light drizzle', 53: 'Moderate drizzle', 55: 'Dense drizzle',\n    61: 'Slight rain', 63: 'Moderate rain', 65: 'Heavy rain',\n    71: 'Slight snow', 73: 'Moderate snow', 75: 'Heavy snow',\n    80: 'Slight rain showers', 81: 'Moderate rain showers', 82: 'Violent rain showers',\n    95: 'Thunderstorm', 96: 'Thunderstorm with slight hail', 99: 'Thunderstorm with heavy hail'\n  };\n  return map[code] || ('Weather code ' + code);\n}\n\nhermes.registerTool('weather', function (args) {\n  var city = String(args.city || '').trim();\n  if (!city) { return 'Provide a city name.'; }\n\n  var geoUrl = 'https://geocoding-api.open-meteo.com/v1/search?count=1&name=' + encodeURIComponent(city);\n  var geo;\n  try { geo = JSON.parse(hermes.http.get(geoUrl)); } catch (e) { return 'Could not look up \"' + city + '\": bad response from the geocoder.'; }\n  if (!geo.results || geo.results.length === 0) { return 'Could not find a location named \"' + city + '\".'; }\n  var loc = geo.results[0];\n\n  var forecastUrl = 'https://api.open-meteo.com/v1/forecast?latitude=' + loc.latitude +\n    '&longitude=' + loc.longitude +\n    '&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m&temperature_unit=celsius';\n  var wx;\n  try { wx = JSON.parse(hermes.http.get(forecastUrl)); } catch (e) { return 'Could not fetch weather for ' + loc.name + '.'; }\n  var cur = wx.current;\n  if (!cur) { return 'No current weather data for ' + loc.name + '.'; }\n\n  var place = loc.name + (loc.admin1 ? ', ' + loc.admin1 : '') + (loc.country ? ', ' + loc.country : '');\n  return place + ': ' + weatherCodeText(cur.weather_code) + ', ' + cur.temperature_2m + '\\u00B0C, humidity ' +\n    cur.relative_humidity_2m + '%, wind ' + cur.wind_speed_10m + ' km/h.';\n});\n"
+}
