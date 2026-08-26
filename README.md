@@ -54,20 +54,30 @@ docs/CREATING_MODULES.md          # the how-to guide
 | [date-math](modules/date-math/) | `date_diff`, `date_add` | Gap between two dates, or shift a date by N days |
 | [json-format](modules/json-format/) | `json_format` | Pretty-print/validate JSON |
 
-All five declare `permissions: []` — each is pure computation on its own arguments. That's
-deliberate, not incidental: see the permissions gap called out below.
+All five declare `permissions: []` — each predates the host implementation below and never
+needed updating, since pure-computation modules don't need permissions anyway. Nothing stops
+a new module from declaring `data.read`, `data.write`, or `network` now.
 
-## ⚠️ Known gap: host-backed permissions aren't wired up yet
+## Host-backed permissions are implemented
 
-`data.read`, `data.write`, and `network` are defined in the schema and enforced by the
-sandbox (a module without the permission gets a thrown, JS-catchable error if it tries), but
-neither Hermes nor Jeeves has an app-side
-[`ScriptPluginHost`](https://github.com/l3ad3r1/agent-core/blob/main/core/plugin/src/main/kotlin/com/hermes/agent/data/plugin/script/ScriptPluginHost.kt)
-implementation yet — `ScriptPluginEngine.host` stays `null` at runtime in both apps, so
-`hermes.data.read`/`write` and `hermes.http.get` are currently no-ops. Until a host
-implementation is added to both apps, build modules that only transform their own
-arguments — that's why every module published here today needs zero permissions. Full
-detail in [docs/CREATING_MODULES.md](docs/CREATING_MODULES.md) under "Current gap".
+[`ScriptPluginHostImpl`](https://github.com/l3ad3r1/agent-core/blob/main/core/plugin/src/main/kotlin/com/hermes/agent/data/plugin/script/ScriptPluginHostImpl.kt)
+(agent-core, shared by both apps) backs all three gated APIs:
+
+- **`hermes.data.read(collection, query)`** / **`hermes.data.write(collection, payload)`**
+  — `collection` is `"notes"`, `"todos"`, or `"bookmarks"` (the same repositories the
+  built-in notes/todo/bookmark tools use). `read` returns a JSON array; `query` blank lists
+  everything (capped at 25), non-blank searches. `write` takes a JSON object with an
+  `"action"` field — `create`/`update`/`delete` for notes and bookmarks,
+  `create`/`complete`/`uncomplete`/`delete` for todos — and returns
+  `{"ok":true,"id":"..."}`. Full field-by-field contract, with examples, in
+  [docs/CREATING_MODULES.md](docs/CREATING_MODULES.md#permissions).
+- **`hermes.http.get(url)`** — a synchronous GET through the host's own OkHttp client (a
+  module never opens its own socket), response capped at 32,000 characters so one module
+  can't blow a whole turn's context budget.
+
+No module in this repo currently uses any of these — all five are still pure computation —
+but new ones can now declare `data.read`/`data.write`/`network` and expect the calls to
+actually work end to end, not just be approved and silently do nothing.
 
 ## Add a module
 
@@ -93,7 +103,6 @@ so a private Jeeves build can point at a different/mirrored `registry.json` if n
 The sandbox boundary is Rhino running in interpreted mode with `setClassShutter { false }`
 (denies every Java class — no reflection, file IO, or sockets reachable) and a
 5,000,000-instruction budget per load/run. A module's only way to reach anything outside its
-own arguments is the permission-gated `hermes.*` API, and today that API's host-backed calls
-are unimplemented no-ops (see the gap above) — so in practice, every module currently
-published here really can only transform text it's handed and return text. Treat that as the
-actual current trust boundary, not the aspirational one described by the permission names.
+own arguments is the permission-gated `hermes.*` API — network and the three host
+collections listed above, nothing else. There is no generic filesystem or settings access,
+and no cross-module communication.

@@ -59,17 +59,9 @@ hermes.data.write(collection, payloadJson);                // needs "data.write"
   inside a JSON string literal is the most common way to produce a manifest that fails to
   parse.
 
-### ⚠️ Current gap: `hermes.data.*` and `hermes.http.get` are not wired up yet
-
-Neither app has an app-side implementation of
-[`ScriptPluginHost`](https://github.com/l3ad3r1/agent-core/blob/main/core/plugin/src/main/kotlin/com/hermes/agent/data/plugin/script/ScriptPluginHost.kt)
-yet — `ScriptPluginEngine.host` is `null` at runtime in both Hermes and Jeeves today, so
-those three calls are effectively no-ops (`http.get`/`data.read` return `""`, `data.write`
-returns `""`). Declaring `data.read`, `data.write`, or `network` in a manifest today gets
-the permission approved and granted, but the call itself does nothing useful until a host
-implementation lands in both apps. **Until then, only build modules that are pure
-computation on their own arguments** (no permissions needed) — that's why every module
-currently in this repo declares `permissions: []`.
+See [Permissions](#permissions) below for the exact `hermes.data.read`/`write` JSON
+contract — which collections exist, what a read call returns, and what a write payload
+needs.
 
 ## 3. Write the manifest
 
@@ -143,15 +135,67 @@ that's fine too: create `modules/<id>/manifest.json` yourself and add the matchi
 
 ## Permissions
 
-| Permission | Grants | Host method | Status |
-|---|---|---|---|
-| `data.read` | `hermes.data.read(collection, query)` | `ScriptPluginHost.readData` | not yet implemented in-app (returns `""`) |
-| `data.write` | `hermes.data.write(collection, payload)` | `ScriptPluginHost.writeData` | not yet implemented in-app (returns `""`) |
-| `network` | `hermes.http.get(url)` | `ScriptPluginHost.httpGet` | not yet implemented in-app (returns `""`) |
+| Permission | Grants | Host method |
+|---|---|---|
+| `data.read` | `hermes.data.read(collection, query)` | `ScriptPluginHost.readData` |
+| `data.write` | `hermes.data.write(collection, payload)` | `ScriptPluginHost.writeData` |
+| `network` | `hermes.http.get(url)` | `ScriptPluginHost.httpGet` |
 
 A module with no permissions is pure computation: it can transform the arguments it's given
 and return a string, and nothing else. Calling a gated API without the permission throws a
 JS-catchable `IllegalStateException` inside the sandbox rather than silently failing.
+
+All three are backed by
+[`ScriptPluginHostImpl`](https://github.com/l3ad3r1/agent-core/blob/main/core/plugin/src/main/kotlin/com/hermes/agent/data/plugin/script/ScriptPluginHostImpl.kt)
+in `agent-core`, shared identically by both apps.
+
+### `hermes.data.read(collection, query)` — needs `data.read`
+
+`collection` is `"notes"`, `"todos"`, or `"bookmarks"` — the same three repositories the
+built-in notes/todo/bookmark tools use; there is no generic storage escape hatch beyond
+these. An unknown collection throws. `query` blank lists everything (capped at 25 results,
+newest-first repository order); non-blank runs that repository's own search. Returns a JSON
+array as a **string** — parse it yourself with `JSON.parse`:
+
+```js
+// notes: [{id, title, content, category, starred, tags: [...]}, ...]
+// todos: [{id, title, body, done, priority, dueDateMs, tags: [...]}, ...]
+// bookmarks: [{id, url, title, note, tags: [...]}, ...]
+var items = JSON.parse(hermes.data.read('notes', ''));
+```
+
+Long text fields (`content`, `body`, `note`) are truncated to 300 characters per item —
+this is for listing/searching, not for pulling one item's full content back out.
+
+### `hermes.data.write(collection, payload)` — needs `data.write`
+
+`payload` is a JSON **string** (build it with `JSON.stringify`, not a raw object) with a
+required `"action"` field. Returns `{"ok":true,"id":"..."}` as a string on success; an
+invalid action, missing field, or record `id` that doesn't exist throws (JS-catchable).
+
+| Collection | Actions | Notes |
+|---|---|---|
+| `notes` | `create` (`title` required; `content`, `tags`, `category`, `folder` optional), `update` (`id` required; any of `title`/`content`/`tags`/`starred` to change), `delete` (`id` required) | |
+| `todos` | `create` (`title` required; `body`, `priority`, `dueDateMs`, `tags` optional), `complete` (`id`), `uncomplete` (`id`), `delete` (`id`) | `priority` is one of `LOW`/`MEDIUM`/`HIGH`/`CRITICAL` (case-insensitive); unrecognized falls back to `MEDIUM` |
+| `bookmarks` | `create` (`url` required; `title`, `note`, `tags` optional), `update` (`id`; any of `title`/`note`/`tags`), `delete` (`id`) | |
+
+```js
+hermes.registerTool('save_finding', function (args) {
+  var result = hermes.data.write('notes', JSON.stringify({
+    action: 'create',
+    title: args.title,
+    content: args.content,
+    tags: ['from-module'],
+  }));
+  return 'Saved as ' + JSON.parse(result).id;
+});
+```
+
+### `hermes.http.get(url)` — needs `network`
+
+Synchronous GET through the host's own OkHttp client — a module never opens its own socket.
+`url` must start with `http://` or `https://` or the call throws. Returns the response body
+as a string, truncated at 32,000 characters. A non-2xx response throws.
 
 ## Design constraints worth internalizing
 
