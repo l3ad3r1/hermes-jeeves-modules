@@ -30,8 +30,9 @@ When a user installs a module in-app (Settings → Features → Modules), the ho
 This design (ported from the JS scripting system already running in production in Octo
 Jotter) replaced an earlier native-APK module design — one signed installable package per
 module, verified by SHA-256/signer fingerprint and handed to the Android package installer.
-That work is preserved for reference in [`legacy/`](legacy/README.md) but nothing in this
-repo builds or ships that way anymore.
+That earlier design's source is gone from this repo (nothing in it built or shipped under
+the current architecture); it's still recoverable from git history before commit `6726805`
+if it's ever needed as reference.
 
 ## Repository layout
 
@@ -41,7 +42,6 @@ modules/<id>/manifest.json        # one module: manifest + its JS source, fetche
 tools/build_registry.py           # generates modules/*/manifest.json + registry.json
 examples/                         # starter manifest.json / registry entry to copy
 docs/CREATING_MODULES.md          # the how-to guide
-legacy/                           # superseded native-APK-era module source (reference only)
 ```
 
 ## Modules in this repo
