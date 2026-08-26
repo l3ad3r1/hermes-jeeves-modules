@@ -1,0 +1,10 @@
+{
+  "id": "example-module",
+  "name": "Example Module",
+  "version": "1.0.0",
+  "author": "Your Name",
+  "description": "One-line description shown in the Modules browse list and the install prompt.",
+  "type": "tool",
+  "permissions": [],
+  "manifestUrl": "https://raw.githubusercontent.com/l3ad3r1/hermes-jeeves-modules/main/modules/example-module/manifest.json"
+}

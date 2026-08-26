@@ -1,0 +1,27 @@
+{
+  "id": "example-module",
+  "name": "Example Module",
+  "version": "1.0.0",
+  "author": "Your Name",
+  "description": "One-line description shown in the Modules browse list and the install prompt.",
+  "type": "tool",
+  "minAppVersion": 0,
+  "permissions": [],
+  "tools": [
+    {
+      "name": "example_tool",
+      "description": "Shown to the model verbatim — explain what the tool does and when to call it.",
+      "category": "productivity",
+      "requiresConfirmation": false,
+      "parameters": [
+        {
+          "name": "input",
+          "type": "STRING",
+          "description": "What this argument means.",
+          "required": true
+        }
+      ]
+    }
+  ],
+  "main": "hermes.registerTool('example_tool', function (args) {\n  var input = String(args.input || '');\n  if (!input) { return 'Provide input.'; }\n  return 'You said: ' + input;\n});\n"
+}

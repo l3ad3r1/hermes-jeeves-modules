@@ -1,94 +1,99 @@
 # Hermes / Jeeves Modules
 
 This is the public module repository for the Hermes Android app and the private Jeeves
-Android app. Both products consume the same HTTPS catalog format and verify every APK's
-size, SHA-256, package identity, manifest, exported service, and signing certificate
-before it can be staged.
+Android app. Both products fetch the same `registry.json` and run installed modules'
+JavaScript in an in-process sandbox — there is no APK, no signing key, and no package
+installer involved.
+
+**For the step-by-step guide to building and shipping a new module, see
+[docs/CREATING_MODULES.md](docs/CREATING_MODULES.md).** This file covers the repo layout
+and the architecture; that one walks through designing, writing, and registering a module.
+
+## How this works
+
+A module is:
+1. One `manifest.json`, served over HTTPS, with a `main` field holding the module's
+   JavaScript source and a `tools[]` array describing the tool(s) it exposes to the model.
+2. One entry in `registry.json`, the index both apps browse, pointing at that manifest's URL.
+
+When a user installs a module in-app (Settings → Features → Modules), the host:
+- fetches and validates the manifest (`ScriptPluginRepository.fetchManifest`/`validate`),
+- shows the declared `permissions` for approval,
+- persists it to Room (`script_plugins` table, DB version **18**, identical schema in both
+  apps),
+- and hands the granted set to
+  [`ScriptPluginEngine`](https://github.com/l3ad3r1/agent-core/blob/main/core/plugin/src/main/kotlin/com/hermes/agent/data/plugin/script/ScriptPluginEngine.kt) —
+  a Mozilla Rhino sandbox running in interpreted mode with all Java class access denied and
+  a per-load instruction budget — which runs the script and registers whatever tools it
+  calls `hermes.registerTool(...)` on, so the model sees them exactly like built-in tools.
+
+This design (ported from the JS scripting system already running in production in Octo
+Jotter) replaced an earlier native-APK module design — one signed installable package per
+module, verified by SHA-256/signer fingerprint and handed to the Android package installer.
+That work is preserved for reference in [`legacy/`](legacy/README.md) but nothing in this
+repo builds or ships that way anymore.
 
 ## Repository layout
 
 ```text
-catalog-v1.json                 # the URL entered under Settings → Features → Modules
-artifacts/<package>/<version>/  # immutable APK release artifacts
-examples/                        # starter manifest and service examples
-modules/<name>/                  # source trees for the featured modules (see below)
+registry.json                    # the URL entered under Settings → Features → Modules
+modules/<id>/manifest.json        # one module: manifest + its JS source, fetched by the app
+tools/build_registry.py           # generates modules/*/manifest.json + registry.json
+examples/                         # starter manifest.json / registry entry to copy
+docs/CREATING_MODULES.md          # the how-to guide
+legacy/                           # superseded native-APK-era module source (reference only)
 ```
 
-## Featured modules
+## Modules in this repo
 
-Five in-app agent tools were generated from the productivity features ported into the Hermes
-app (domain model + repository interface + Room entity/DAO + tool + Hilt binding). Each lives
-under [`modules/`](modules/) with its own README, source tree, and Room migration SQL.
+| Module | Tool(s) | What it does |
+|---|---|---|
+| [word-count](modules/word-count/) | `word_count` | Counts words, characters, sentences; estimates reading time |
+| [text-tools](modules/text-tools/) | `text_transform` | Case conversion, reverse, URL slug, whitespace strip |
+| [unit-convert](modules/unit-convert/) | `unit_convert` | Length, mass, and temperature conversion |
+| [date-math](modules/date-math/) | `date_diff`, `date_add` | Gap between two dates, or shift a date by N days |
+| [json-format](modules/json-format/) | `json_format` | Pretty-print/validate JSON |
 
-| Module | Tool | Capability | DB migration | README |
-|--------|------|------------|--------------|--------|
-| [notes](modules/notes/) | `notes` — knowledge capture, markdown notes | `notes` | 13 → 14 | [README](modules/notes/README.md) |
-| [todo](modules/todo/) | `todo` — personal tasks with due dates (distinct from kanban) | `todo` | 14 → 15 | [README](modules/todo/README.md) |
-| [calendar](modules/calendar/) | `calendar` — events, writes to device calendar via `CalendarEventGateway` | `calendar` | 15 → 16 | [README](modules/calendar/README.md) |
-| [bookmarks](modules/bookmarks/) | `bookmarks` — save/search URLs and links | `bookmarks` | 16 → 17 | [README](modules/bookmarks/README.md) |
-| [mood](modules/mood/) | `mood` — daily mood logging + insights | `mood` | 16 → 17 | [README](modules/mood/README.md) |
+All five declare `permissions: []` — each is pure computation on its own arguments. That's
+deliberate, not incidental: see the permissions gap called out below.
 
-The `bookmarks` and `mood` modules share the single `MIGRATION_16_17` (both tables are created in
-one migration). `calendar` requires `READ_CALENDAR`/`WRITE_CALENDAR` runtime permissions and a
-`CalendarEventGateway` binding in the host app.
+## ⚠️ Known gap: host-backed permissions aren't wired up yet
 
-Each module must be registered in the host before it is usable: add the Room entity/DAO to
-`HermesDatabase`, the migration to `DatabaseModule.addMigrations(...)`, the tool to
-`di/ToolsModule`, the capability grant to `AgentToolAccess`, and mention it in the persona
-prompts.
+`data.read`, `data.write`, and `network` are defined in the schema and enforced by the
+sandbox (a module without the permission gets a thrown, JS-catchable error if it tries), but
+neither Hermes nor Jeeves has an app-side
+[`ScriptPluginHost`](https://github.com/l3ad3r1/agent-core/blob/main/core/plugin/src/main/kotlin/com/hermes/agent/data/plugin/script/ScriptPluginHost.kt)
+implementation yet — `ScriptPluginEngine.host` stays `null` at runtime in both apps, so
+`hermes.data.read`/`write` and `hermes.http.get` are currently no-ops. Until a host
+implementation is added to both apps, build modules that only transform their own
+arguments — that's why every module published here today needs zero permissions. Full
+detail in [docs/CREATING_MODULES.md](docs/CREATING_MODULES.md) under "Current gap".
 
-The empty [`catalog-v1.json`](catalog-v1.json) is a valid starting catalog. Do not point
-the apps at a catalog until every listed artifact is available at its final HTTPS URL.
-For a smoke test, paste this raw URL into either app's Modules setting:
-`https://raw.githubusercontent.com/l3ad3r1/hermes-jeeves-modules/main/catalog-v1.json`.
+## Add a module
 
-## Create a module
+See [docs/CREATING_MODULES.md](docs/CREATING_MODULES.md) for the full walkthrough. Short
+version:
 
-1. Create an Android library or application module that exposes one plugin service. The
-   service must be safe to run in a sandbox and must implement the shared protocol version
-   `1`. Keep the plugin package ID stable; schema v1 requires it to equal the plugin ID.
-2. Add the manifest metadata key
-   `com.hermes.agent.PLUGIN_MANIFEST_V1`. Its value is the JSON-encoded manifest shown in
-   [`examples/plugin-manifest-v1.json`](examples/plugin-manifest-v1.json). Declare the
-   catalog `serviceClassName` as an exported service with the agreed intent contract.
-3. Declare only the permissions the module needs. Every permission needs a user-facing
-   rationale. Keep network and remote content handling explicit; never hide privileged
-   behavior in initialization.
-4. Sign the release APK with a stable publisher certificate. Compute its SHA-256
-   fingerprint and place that fingerprint in the manifest. A changed signing key is a
-   new publisher identity and requires a new approval.
-5. Publish the APK at an immutable HTTPS URL. Do not replace bytes at an existing version
-   path. Record the exact byte count and SHA-256 digest.
-6. Add the entry to [`catalog-v1.json`](catalog-v1.json), including the complete manifest,
-   artifact URL, digest, size, package name, service class, and protocol version.
-7. Validate the catalog and test it in both products: open **Settings → Features →
-   Modules**, enter the raw catalog URL, load it, and download the module. Review the
-   displayed permissions and publisher identity before any future installer handoff.
-
-## Catalog entry checklist
-
-- `schemaVersion` is `1`.
-- Plugin IDs are unique, reverse-DNS identifiers, and match Android package names.
-- `versionCode` is positive and increases for every published update.
-- `signatureFingerprint` and `apkSha256` are uppercase SHA-256 values.
-- `apkUrl` uses HTTPS and is immutable.
-- `sizeBytes` equals the final APK byte count.
-- `serviceClassName` is present in the APK and exported as required by the host contract.
-- Capability and tool names are unique; permission rationales are non-empty.
+1. Design the tool's name, description, and parameters — the description is what tells the
+   model when to use it.
+2. Write the JS (`hermes.registerTool(name, fn)`), keeping it in `tools/build_registry.py`
+   as a Python string so escaping is handled for you.
+3. Run `python tools/build_registry.py` to write `modules/<id>/manifest.json` and regenerate
+   `registry.json`.
+4. Push, then load the registry URL in-app (Settings → Features → Modules) and install.
 
 ## Publishing
 
-Keep APKs out of normal Git history when they are large; GitHub Releases are preferred.
-After uploading an immutable APK, update the catalog and publish the catalog from the
-default branch. The apps cache no trusted catalog URL, so users can choose the public
-repository explicitly and private Jeeves installations can use a controlled mirror.
-
-The full schema and verification rules are maintained in the shared core documentation:
-[`PLUGIN_REPOSITORY.md`](https://github.com/l3ad3r1/agent-core/blob/main/docs/PLUGIN_REPOSITORY.md).
+This repo is small text/JSON, so everything stays in normal Git history — publish by
+pushing to `main`. The apps cache no registry URL of their own choosing beyond the default,
+so a private Jeeves build can point at a different/mirrored `registry.json` if needed.
 
 ## Security model
 
-An HTTPS URL and checksum protect transport integrity, not publisher trust. Hermes and
-Jeeves inspect the downloaded APK and bind approval to the exact plugin ID, version,
-digest, signer, and permission list. Treat catalog edits and signing keys as release
-operations, review them, and never publish credentials in this repository.
+The sandbox boundary is Rhino running in interpreted mode with `setClassShutter { false }`
+(denies every Java class — no reflection, file IO, or sockets reachable) and a
+5,000,000-instruction budget per load/run. A module's only way to reach anything outside its
+own arguments is the permission-gated `hermes.*` API, and today that API's host-backed calls
+are unimplemented no-ops (see the gap above) — so in practice, every module currently
+published here really can only transform text it's handed and return text. Treat that as the
+actual current trust boundary, not the aspirational one described by the permission names.
