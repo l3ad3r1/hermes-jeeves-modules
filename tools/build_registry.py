@@ -4,8 +4,16 @@
 Scripts are authored as plain Python strings here so JSON escaping is handled
 by the encoder rather than by hand — hand-escaped JavaScript inside JSON was
 the source of every malformed manifest in this repo's history.
+
+Each registry entry carries the SHA-256 of the manifest it points at. A module's
+JavaScript lives inside its manifest, so an unpinned manifest URL means the code
+a user approved can be swapped for different code afterwards. The app refuses to
+install a manifest whose bytes do not match this digest, so ALWAYS regenerate
+with this script rather than hand-editing a manifest — an edited manifest with a
+stale digest is rejected on every device.
 """
 
+import hashlib
 import json
 import os
 
@@ -375,9 +383,13 @@ def main():
         module_dir = os.path.join(MODULES_DIR, module["id"])
         os.makedirs(module_dir, exist_ok=True)
         path = os.path.join(module_dir, "manifest.json")
+        payload = json.dumps(module, indent=2, ensure_ascii=False) + "\n"
         with open(path, "w", encoding="utf-8", newline="\n") as handle:
-            json.dump(module, handle, indent=2, ensure_ascii=False)
-            handle.write("\n")
+            handle.write(payload)
+
+        # Hash the exact bytes served from raw.githubusercontent.com, which are
+        # the bytes just written — the app hashes the response body the same way.
+        digest = hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
         registry["plugins"].append(
             {
@@ -389,6 +401,7 @@ def main():
                 "type": module["type"],
                 "permissions": module["permissions"],
                 "manifestUrl": "%s/modules/%s/manifest.json" % (REPO, module["id"]),
+                "sha256": digest,
             }
         )
 

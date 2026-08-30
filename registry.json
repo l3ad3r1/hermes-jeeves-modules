@@ -9,7 +9,8 @@
       "description": "Counts words, characters, and sentences, and estimates reading time.",
       "type": "tool",
       "permissions": [],
-      "manifestUrl": "https://raw.githubusercontent.com/l3ad3r1/hermes-jeeves-modules/main/modules/word-count/manifest.json"
+      "manifestUrl": "https://raw.githubusercontent.com/l3ad3r1/hermes-jeeves-modules/main/modules/word-count/manifest.json",
+      "sha256": "84df7e3efe2a17dfd1005ad02e09499a852f70c700a6a04a3d7927cf69d759ee"
     },
     {
       "id": "text-tools",
@@ -19,7 +20,8 @@
       "description": "Changes text case and makes URL slugs.",
       "type": "tool",
       "permissions": [],
-      "manifestUrl": "https://raw.githubusercontent.com/l3ad3r1/hermes-jeeves-modules/main/modules/text-tools/manifest.json"
+      "manifestUrl": "https://raw.githubusercontent.com/l3ad3r1/hermes-jeeves-modules/main/modules/text-tools/manifest.json",
+      "sha256": "17bff4d5f901bd796bca45884298ada3adc131250e734d95c4aedd13e3c7322a"
     },
     {
       "id": "unit-convert",
@@ -29,7 +31,8 @@
       "description": "Converts length, mass, and temperature units.",
       "type": "tool",
       "permissions": [],
-      "manifestUrl": "https://raw.githubusercontent.com/l3ad3r1/hermes-jeeves-modules/main/modules/unit-convert/manifest.json"
+      "manifestUrl": "https://raw.githubusercontent.com/l3ad3r1/hermes-jeeves-modules/main/modules/unit-convert/manifest.json",
+      "sha256": "02efce15095d80bb5a9eee28a22c4d01794c476245b8452937ac68e3bb6e2c7c"
     },
     {
       "id": "date-math",
@@ -39,7 +42,8 @@
       "description": "Works out the gap between two dates, or shifts a date by days.",
       "type": "tool",
       "permissions": [],
-      "manifestUrl": "https://raw.githubusercontent.com/l3ad3r1/hermes-jeeves-modules/main/modules/date-math/manifest.json"
+      "manifestUrl": "https://raw.githubusercontent.com/l3ad3r1/hermes-jeeves-modules/main/modules/date-math/manifest.json",
+      "sha256": "8b1564eda9ebece2c5efe6ad6263b79257ba90fd3bfe73dc483f5a81115c30b6"
     },
     {
       "id": "json-format",
@@ -49,7 +53,8 @@
       "description": "Pretty-prints and validates JSON.",
       "type": "tool",
       "permissions": [],
-      "manifestUrl": "https://raw.githubusercontent.com/l3ad3r1/hermes-jeeves-modules/main/modules/json-format/manifest.json"
+      "manifestUrl": "https://raw.githubusercontent.com/l3ad3r1/hermes-jeeves-modules/main/modules/json-format/manifest.json",
+      "sha256": "943dfbbe52de5f31c5a06c0809850272def850e48b7d5995e355de42aec690b2"
     },
     {
       "id": "daily-digest",
@@ -61,7 +66,8 @@
       "permissions": [
         "data.read"
       ],
-      "manifestUrl": "https://raw.githubusercontent.com/l3ad3r1/hermes-jeeves-modules/main/modules/daily-digest/manifest.json"
+      "manifestUrl": "https://raw.githubusercontent.com/l3ad3r1/hermes-jeeves-modules/main/modules/daily-digest/manifest.json",
+      "sha256": "29411a4f3d0df350b744cf4b7c376525bf206fcee45e83f9a6ad3dcbc31dde91"
     },
     {
       "id": "weather",
@@ -73,7 +79,8 @@
       "permissions": [
         "network"
       ],
-      "manifestUrl": "https://raw.githubusercontent.com/l3ad3r1/hermes-jeeves-modules/main/modules/weather/manifest.json"
+      "manifestUrl": "https://raw.githubusercontent.com/l3ad3r1/hermes-jeeves-modules/main/modules/weather/manifest.json",
+      "sha256": "b0806c4be0f8d18fa53b2c653dcadc9fb566fce2208301926b6bd7de0e57fc39"
     }
   ]
 }
