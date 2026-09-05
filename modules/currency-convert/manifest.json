@@ -1,0 +1,39 @@
+{
+  "id": "currency-convert",
+  "name": "Currency Converter",
+  "version": "1.0.0",
+  "author": "Hermes",
+  "description": "Converts currencies using live ECB exchange rates via Frankfurter.",
+  "type": "tool",
+  "permissions": [
+    "network"
+  ],
+  "tools": [
+    {
+      "name": "convert_currency",
+      "description": "Convert an amount from one currency to another using live exchange rates. Supported: 3-letter currency codes like USD, EUR, GBP, INR, JPY.",
+      "category": "information",
+      "parameters": [
+        {
+          "name": "amount",
+          "type": "NUMBER",
+          "description": "The numeric amount to convert",
+          "required": true
+        },
+        {
+          "name": "from",
+          "type": "STRING",
+          "description": "Source currency code, e.g. USD, EUR",
+          "required": true
+        },
+        {
+          "name": "to",
+          "type": "STRING",
+          "description": "Target currency code, e.g. INR, GBP",
+          "required": true
+        }
+      ]
+    }
+  ],
+  "main": "\nfunction formatNum(n) {\n  var parts = Number(n).toFixed(2).split('.');\n  parts[0] = parts[0].replace(/\\B(?=(\\d{3})+(?!\\d))/g, ',');\n  return parts.join('.');\n}\n\nfunction formatAmount(n) {\n  var s = String(n);\n  var parts = s.split('.');\n  parts[0] = parts[0].replace(/\\B(?=(\\d{3})+(?!\\d))/g, ',');\n  return parts.join('.');\n}\n\nhermes.registerTool('convert_currency', function (args) {\n  var amount = parseFloat(args.amount);\n  if (isNaN(amount)) { return 'Provide a numeric amount.'; }\n  var from = String(args.from || '').trim().toUpperCase();\n  var to = String(args.to || '').trim().toUpperCase();\n  if (!from || !to) { return 'Provide both source and target currency codes (e.g. USD, EUR).'; }\n  if (from === to) {\n    return formatAmount(amount) + ' ' + from + ' = ' + formatAmount(amount) + ' ' + to;\n  }\n\n  var url = 'https://api.frankfurter.app/latest?amount=' +\n    encodeURIComponent(amount) + '&from=' + encodeURIComponent(from) + '&to=' + encodeURIComponent(to);\n\n  var resp;\n  try {\n    resp = hermes.http.get(url);\n  } catch (e) {\n    return 'Could not convert ' + formatAmount(amount) + ' ' + from + ' to ' + to + ': invalid currency code or network error.';\n  }\n\n  var data;\n  try {\n    data = JSON.parse(resp);\n  } catch (e) {\n    return 'Could not parse response from currency service.';\n  }\n\n  if (!data || !data.rates || data.rates[to] === undefined) {\n    return 'No conversion rate returned for ' + to + '.';\n  }\n\n  var converted = data.rates[to];\n  var dateStr = data.date ? ' (' + data.date + ' rate)' : '';\n  return formatAmount(amount) + ' ' + from + ' = ' + formatNum(converted) + ' ' + to + dateStr;\n});\n"
+}

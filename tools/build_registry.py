@@ -213,6 +213,224 @@ hermes.registerTool('weather', function (args) {
 });
 """
 
+CURRENCY_CONVERT_JS = """
+function formatNum(n) {
+  var parts = Number(n).toFixed(2).split('.');
+  parts[0] = parts[0].replace(/\\B(?=(\\d{3})+(?!\\d))/g, ',');
+  return parts.join('.');
+}
+
+function formatAmount(n) {
+  var s = String(n);
+  var parts = s.split('.');
+  parts[0] = parts[0].replace(/\\B(?=(\\d{3})+(?!\\d))/g, ',');
+  return parts.join('.');
+}
+
+hermes.registerTool('convert_currency', function (args) {
+  var amount = parseFloat(args.amount);
+  if (isNaN(amount)) { return 'Provide a numeric amount.'; }
+  var from = String(args.from || '').trim().toUpperCase();
+  var to = String(args.to || '').trim().toUpperCase();
+  if (!from || !to) { return 'Provide both source and target currency codes (e.g. USD, EUR).'; }
+  if (from === to) {
+    return formatAmount(amount) + ' ' + from + ' = ' + formatAmount(amount) + ' ' + to;
+  }
+
+  var url = 'https://api.frankfurter.app/latest?amount=' +
+    encodeURIComponent(amount) + '&from=' + encodeURIComponent(from) + '&to=' + encodeURIComponent(to);
+
+  var resp;
+  try {
+    resp = hermes.http.get(url);
+  } catch (e) {
+    return 'Could not convert ' + formatAmount(amount) + ' ' + from + ' to ' + to + ': invalid currency code or network error.';
+  }
+
+  var data;
+  try {
+    data = JSON.parse(resp);
+  } catch (e) {
+    return 'Could not parse response from currency service.';
+  }
+
+  if (!data || !data.rates || data.rates[to] === undefined) {
+    return 'No conversion rate returned for ' + to + '.';
+  }
+
+  var converted = data.rates[to];
+  var dateStr = data.date ? ' (' + data.date + ' rate)' : '';
+  return formatAmount(amount) + ' ' + from + ' = ' + formatNum(converted) + ' ' + to + dateStr;
+});
+"""
+
+WORD_LOOKUP_JS = """
+hermes.registerTool('define_word', function (args) {
+  var word = String(args.word || '').trim().toLowerCase();
+  if (!word) { return 'Provide a word to look up.'; }
+
+  var url = 'https://api.dictionaryapi.dev/api/v2/entries/en/' + encodeURIComponent(word);
+  var resp;
+  try {
+    resp = hermes.http.get(url);
+  } catch (e) {
+    return 'No definition found for "' + word + '".';
+  }
+
+  var data;
+  try {
+    data = JSON.parse(resp);
+  } catch (e) {
+    return 'No definition found for "' + word + '".';
+  }
+
+  if (!data || !data.length) {
+    return 'No definition found for "' + word + '".';
+  }
+
+  var entry = data[0];
+  var phonetic = entry.phonetic || '';
+  if (!phonetic && entry.phonetics && entry.phonetics.length) {
+    for (var p = 0; p < entry.phonetics.length; p++) {
+      if (entry.phonetics[p] && entry.phonetics[p].text) {
+        phonetic = entry.phonetics[p].text;
+        break;
+      }
+    }
+  }
+
+  var lines = [];
+  var header = entry.word || word;
+  if (phonetic) { header += ' (' + phonetic + ')'; }
+  lines.push(header + ':');
+
+  var count = 0;
+  if (entry.meanings && entry.meanings.length) {
+    for (var m = 0; m < entry.meanings.length && count < 2; m++) {
+      var meaning = entry.meanings[m];
+      var pos = meaning.partOfSpeech ? '[' + meaning.partOfSpeech + '] ' : '';
+      var defs = meaning.definitions || [];
+      for (var d = 0; d < defs.length && count < 2; d++) {
+        var defText = defs[d] && defs[d].definition ? defs[d].definition.trim() : '';
+        if (defText) {
+          count++;
+          lines.push(count + '. ' + pos + defText);
+        }
+      }
+    }
+  }
+
+  if (count === 0) {
+    return 'No definition found for "' + word + '".';
+  }
+
+  return lines.join('\\n');
+});
+"""
+
+TAG_EXPLORER_JS = """
+function hasTag(tags, target) {
+  if (!tags || !tags.length) { return false; }
+  for (var i = 0; i < tags.length; i++) {
+    if (String(tags[i] || '').trim().toLowerCase() === target) {
+      return true;
+    }
+  }
+  return false;
+}
+
+hermes.registerTool('tag_report', function (args) {
+  var notes = JSON.parse(hermes.data.read('notes', '') || '[]');
+  var todos = JSON.parse(hermes.data.read('todos', '') || '[]');
+  var bookmarks = JSON.parse(hermes.data.read('bookmarks', '') || '[]');
+
+  var filterTag = args && args.tag ? String(args.tag).trim().toLowerCase() : '';
+
+  if (filterTag) {
+    var matches = [];
+    var i;
+    for (i = 0; i < notes.length; i++) {
+      var n = notes[i];
+      if (hasTag(n.tags, filterTag)) {
+        matches.push('  • [Note] ' + (n.title || 'Untitled'));
+      }
+    }
+    for (i = 0; i < todos.length; i++) {
+      var t = todos[i];
+      if (hasTag(t.tags, filterTag)) {
+        var status = t.done ? 'done' : 'open';
+        matches.push('  • [Todo] ' + (t.title || 'Untitled') + ' (' + status + ')');
+      }
+    }
+    for (i = 0; i < bookmarks.length; i++) {
+      var b = bookmarks[i];
+      if (hasTag(b.tags, filterTag)) {
+        matches.push('  • [Bookmark] ' + (b.title || b.url || 'Untitled'));
+      }
+    }
+
+    if (matches.length === 0) {
+      return 'No items found tagged with "' + filterTag + '" (checked up to 25 recent items per collection).';
+    }
+
+    return 'Items tagged "' + filterTag + '" (' + matches.length + ' found across recent notes, todos, bookmarks):\\n' +
+      matches.join('\\n');
+  }
+
+  var counts = {};
+  function tally(items, type) {
+    for (var i = 0; i < items.length; i++) {
+      var tags = items[i].tags;
+      if (tags && tags.length) {
+        for (var j = 0; j < tags.length; j++) {
+          var raw = String(tags[j] || '').trim().toLowerCase();
+          if (raw) {
+            if (!counts[raw]) {
+              counts[raw] = { total: 0, notes: 0, todos: 0, bookmarks: 0 };
+            }
+            counts[raw].total++;
+            counts[raw][type]++;
+          }
+        }
+      }
+    }
+  }
+
+  tally(notes, 'notes');
+  tally(todos, 'todos');
+  tally(bookmarks, 'bookmarks');
+
+  var tagNames = [];
+  for (var k in counts) {
+    if (Object.prototype.hasOwnProperty.call(counts, k)) {
+      tagNames.push(k);
+    }
+  }
+
+  if (tagNames.length === 0) {
+    return 'No tagged items found across recent notes, todos, or bookmarks (checked up to 25 items each).';
+  }
+
+  tagNames.sort(function (a, b) {
+    return counts[b].total - counts[a].total;
+  });
+
+  var lines = [];
+  lines.push('Tag summary across recent collections (capped at 25 items each):');
+  for (var idx = 0; idx < tagNames.length; idx++) {
+    var name = tagNames[idx];
+    var c = counts[name];
+    var breakdown = [];
+    if (c.notes > 0) { breakdown.push(c.notes + ' note' + (c.notes === 1 ? '' : 's')); }
+    if (c.todos > 0) { breakdown.push(c.todos + ' todo' + (c.todos === 1 ? '' : 's')); }
+    if (c.bookmarks > 0) { breakdown.push(c.bookmarks + ' bookmark' + (c.bookmarks === 1 ? '' : 's')); }
+    lines.push('  • ' + name + ': ' + c.total + ' item' + (c.total === 1 ? '' : 's') + ' (' + breakdown.join(', ') + ')');
+  }
+
+  return lines.join('\\n');
+});
+"""
+
 MODULES = [
     {
         "id": "word-count",
@@ -371,6 +589,68 @@ MODULES = [
             },
         ],
         "main": WEATHER_JS,
+    },
+    {
+        "id": "currency-convert",
+        "name": "Currency Converter",
+        "version": "1.0.0",
+        "author": "Hermes",
+        "description": "Converts currencies using live ECB exchange rates via Frankfurter.",
+        "type": "tool",
+        "permissions": ["network"],
+        "tools": [
+            {
+                "name": "convert_currency",
+                "description": "Convert an amount from one currency to another using live exchange rates. Supported: 3-letter currency codes like USD, EUR, GBP, INR, JPY.",
+                "category": "information",
+                "parameters": [
+                    {"name": "amount", "type": "NUMBER", "description": "The numeric amount to convert", "required": True},
+                    {"name": "from", "type": "STRING", "description": "Source currency code, e.g. USD, EUR", "required": True},
+                    {"name": "to", "type": "STRING", "description": "Target currency code, e.g. INR, GBP", "required": True},
+                ],
+            },
+        ],
+        "main": CURRENCY_CONVERT_JS,
+    },
+    {
+        "id": "word-lookup",
+        "name": "Word Lookup",
+        "version": "1.0.0",
+        "author": "Hermes",
+        "description": "Looks up English word definitions, pronunciation, and part of speech via DictionaryAPI.",
+        "type": "tool",
+        "permissions": ["network"],
+        "tools": [
+            {
+                "name": "define_word",
+                "description": "Look up definitions, pronunciation, and part of speech for an English word. Use when asked for the definition or meaning of a word.",
+                "category": "information",
+                "parameters": [
+                    {"name": "word", "type": "STRING", "description": "The word to look up", "required": True},
+                ],
+            },
+        ],
+        "main": WORD_LOOKUP_JS,
+    },
+    {
+        "id": "tag-explorer",
+        "name": "Tag Explorer",
+        "version": "1.0.0",
+        "author": "Hermes",
+        "description": "Surveys and lists notes, todos, and bookmarks by tag across all collections.",
+        "type": "tool",
+        "permissions": ["data.read"],
+        "tools": [
+            {
+                "name": "tag_report",
+                "description": "Report tag counts or list items with a specific tag across notes, todos, and bookmarks (capped at 25 newest items per collection). Use when exploring tags or searching for items with a specific tag across collections.",
+                "category": "productivity",
+                "parameters": [
+                    {"name": "tag", "type": "STRING", "description": "Optional tag name to filter by. If omitted, returns a frequency count of all tags across collections.", "required": False},
+                ],
+            },
+        ],
+        "main": TAG_EXPLORER_JS,
     },
 ]
 

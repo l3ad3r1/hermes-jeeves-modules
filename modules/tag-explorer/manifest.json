@@ -1,0 +1,27 @@
+{
+  "id": "tag-explorer",
+  "name": "Tag Explorer",
+  "version": "1.0.0",
+  "author": "Hermes",
+  "description": "Surveys and lists notes, todos, and bookmarks by tag across all collections.",
+  "type": "tool",
+  "permissions": [
+    "data.read"
+  ],
+  "tools": [
+    {
+      "name": "tag_report",
+      "description": "Report tag counts or list items with a specific tag across notes, todos, and bookmarks (capped at 25 newest items per collection). Use when exploring tags or searching for items with a specific tag across collections.",
+      "category": "productivity",
+      "parameters": [
+        {
+          "name": "tag",
+          "type": "STRING",
+          "description": "Optional tag name to filter by. If omitted, returns a frequency count of all tags across collections.",
+          "required": false
+        }
+      ]
+    }
+  ],
+  "main": "\nfunction hasTag(tags, target) {\n  if (!tags || !tags.length) { return false; }\n  for (var i = 0; i < tags.length; i++) {\n    if (String(tags[i] || '').trim().toLowerCase() === target) {\n      return true;\n    }\n  }\n  return false;\n}\n\nhermes.registerTool('tag_report', function (args) {\n  var notes = JSON.parse(hermes.data.read('notes', '') || '[]');\n  var todos = JSON.parse(hermes.data.read('todos', '') || '[]');\n  var bookmarks = JSON.parse(hermes.data.read('bookmarks', '') || '[]');\n\n  var filterTag = args && args.tag ? String(args.tag).trim().toLowerCase() : '';\n\n  if (filterTag) {\n    var matches = [];\n    var i;\n    for (i = 0; i < notes.length; i++) {\n      var n = notes[i];\n      if (hasTag(n.tags, filterTag)) {\n        matches.push('  • [Note] ' + (n.title || 'Untitled'));\n      }\n    }\n    for (i = 0; i < todos.length; i++) {\n      var t = todos[i];\n      if (hasTag(t.tags, filterTag)) {\n        var status = t.done ? 'done' : 'open';\n        matches.push('  • [Todo] ' + (t.title || 'Untitled') + ' (' + status + ')');\n      }\n    }\n    for (i = 0; i < bookmarks.length; i++) {\n      var b = bookmarks[i];\n      if (hasTag(b.tags, filterTag)) {\n        matches.push('  • [Bookmark] ' + (b.title || b.url || 'Untitled'));\n      }\n    }\n\n    if (matches.length === 0) {\n      return 'No items found tagged with \"' + filterTag + '\" (checked up to 25 recent items per collection).';\n    }\n\n    return 'Items tagged \"' + filterTag + '\" (' + matches.length + ' found across recent notes, todos, bookmarks):\\n' +\n      matches.join('\\n');\n  }\n\n  var counts = {};\n  function tally(items, type) {\n    for (var i = 0; i < items.length; i++) {\n      var tags = items[i].tags;\n      if (tags && tags.length) {\n        for (var j = 0; j < tags.length; j++) {\n          var raw = String(tags[j] || '').trim().toLowerCase();\n          if (raw) {\n            if (!counts[raw]) {\n              counts[raw] = { total: 0, notes: 0, todos: 0, bookmarks: 0 };\n            }\n            counts[raw].total++;\n            counts[raw][type]++;\n          }\n        }\n      }\n    }\n  }\n\n  tally(notes, 'notes');\n  tally(todos, 'todos');\n  tally(bookmarks, 'bookmarks');\n\n  var tagNames = [];\n  for (var k in counts) {\n    if (Object.prototype.hasOwnProperty.call(counts, k)) {\n      tagNames.push(k);\n    }\n  }\n\n  if (tagNames.length === 0) {\n    return 'No tagged items found across recent notes, todos, or bookmarks (checked up to 25 items each).';\n  }\n\n  tagNames.sort(function (a, b) {\n    return counts[b].total - counts[a].total;\n  });\n\n  var lines = [];\n  lines.push('Tag summary across recent collections (capped at 25 items each):');\n  for (var idx = 0; idx < tagNames.length; idx++) {\n    var name = tagNames[idx];\n    var c = counts[name];\n    var breakdown = [];\n    if (c.notes > 0) { breakdown.push(c.notes + ' note' + (c.notes === 1 ? '' : 's')); }\n    if (c.todos > 0) { breakdown.push(c.todos + ' todo' + (c.todos === 1 ? '' : 's')); }\n    if (c.bookmarks > 0) { breakdown.push(c.bookmarks + ' bookmark' + (c.bookmarks === 1 ? '' : 's')); }\n    lines.push('  • ' + name + ': ' + c.total + ' item' + (c.total === 1 ? '' : 's') + ' (' + breakdown.join(', ') + ')');\n  }\n\n  return lines.join('\\n');\n});\n"
+}

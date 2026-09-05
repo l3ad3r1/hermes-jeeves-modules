@@ -81,6 +81,45 @@
       ],
       "manifestUrl": "https://raw.githubusercontent.com/l3ad3r1/hermes-jeeves-modules/main/modules/weather/manifest.json",
       "sha256": "b0806c4be0f8d18fa53b2c653dcadc9fb566fce2208301926b6bd7de0e57fc39"
+    },
+    {
+      "id": "currency-convert",
+      "name": "Currency Converter",
+      "version": "1.0.0",
+      "author": "Hermes",
+      "description": "Converts currencies using live ECB exchange rates via Frankfurter.",
+      "type": "tool",
+      "permissions": [
+        "network"
+      ],
+      "manifestUrl": "https://raw.githubusercontent.com/l3ad3r1/hermes-jeeves-modules/main/modules/currency-convert/manifest.json",
+      "sha256": "64728f58a60a0b38410c0587ab9c6d9c1b4dc3634bb6ffaa6c78ffca15067529"
+    },
+    {
+      "id": "word-lookup",
+      "name": "Word Lookup",
+      "version": "1.0.0",
+      "author": "Hermes",
+      "description": "Looks up English word definitions, pronunciation, and part of speech via DictionaryAPI.",
+      "type": "tool",
+      "permissions": [
+        "network"
+      ],
+      "manifestUrl": "https://raw.githubusercontent.com/l3ad3r1/hermes-jeeves-modules/main/modules/word-lookup/manifest.json",
+      "sha256": "2d953d28dbc2dd67063c69d9c994bc7831faea27dd40e1a5d72b6befc93054dc"
+    },
+    {
+      "id": "tag-explorer",
+      "name": "Tag Explorer",
+      "version": "1.0.0",
+      "author": "Hermes",
+      "description": "Surveys and lists notes, todos, and bookmarks by tag across all collections.",
+      "type": "tool",
+      "permissions": [
+        "data.read"
+      ],
+      "manifestUrl": "https://raw.githubusercontent.com/l3ad3r1/hermes-jeeves-modules/main/modules/tag-explorer/manifest.json",
+      "sha256": "7de0205ab0a5ecb9407b60cc86f7320991d4fb31e496f02a564c50ca5cea7e5f"
     }
   ]
 }

@@ -1,0 +1,27 @@
+{
+  "id": "word-lookup",
+  "name": "Word Lookup",
+  "version": "1.0.0",
+  "author": "Hermes",
+  "description": "Looks up English word definitions, pronunciation, and part of speech via DictionaryAPI.",
+  "type": "tool",
+  "permissions": [
+    "network"
+  ],
+  "tools": [
+    {
+      "name": "define_word",
+      "description": "Look up definitions, pronunciation, and part of speech for an English word. Use when asked for the definition or meaning of a word.",
+      "category": "information",
+      "parameters": [
+        {
+          "name": "word",
+          "type": "STRING",
+          "description": "The word to look up",
+          "required": true
+        }
+      ]
+    }
+  ],
+  "main": "\nhermes.registerTool('define_word', function (args) {\n  var word = String(args.word || '').trim().toLowerCase();\n  if (!word) { return 'Provide a word to look up.'; }\n\n  var url = 'https://api.dictionaryapi.dev/api/v2/entries/en/' + encodeURIComponent(word);\n  var resp;\n  try {\n    resp = hermes.http.get(url);\n  } catch (e) {\n    return 'No definition found for \"' + word + '\".';\n  }\n\n  var data;\n  try {\n    data = JSON.parse(resp);\n  } catch (e) {\n    return 'No definition found for \"' + word + '\".';\n  }\n\n  if (!data || !data.length) {\n    return 'No definition found for \"' + word + '\".';\n  }\n\n  var entry = data[0];\n  var phonetic = entry.phonetic || '';\n  if (!phonetic && entry.phonetics && entry.phonetics.length) {\n    for (var p = 0; p < entry.phonetics.length; p++) {\n      if (entry.phonetics[p] && entry.phonetics[p].text) {\n        phonetic = entry.phonetics[p].text;\n        break;\n      }\n    }\n  }\n\n  var lines = [];\n  var header = entry.word || word;\n  if (phonetic) { header += ' (' + phonetic + ')'; }\n  lines.push(header + ':');\n\n  var count = 0;\n  if (entry.meanings && entry.meanings.length) {\n    for (var m = 0; m < entry.meanings.length && count < 2; m++) {\n      var meaning = entry.meanings[m];\n      var pos = meaning.partOfSpeech ? '[' + meaning.partOfSpeech + '] ' : '';\n      var defs = meaning.definitions || [];\n      for (var d = 0; d < defs.length && count < 2; d++) {\n        var defText = defs[d] && defs[d].definition ? defs[d].definition.trim() : '';\n        if (defText) {\n          count++;\n          lines.push(count + '. ' + pos + defText);\n        }\n      }\n    }\n  }\n\n  if (count === 0) {\n    return 'No definition found for \"' + word + '\".';\n  }\n\n  return lines.join('\\n');\n});\n"
+}

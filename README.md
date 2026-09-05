@@ -55,10 +55,12 @@ docs/CREATING_MODULES.md          # the how-to guide
 | [json-format](modules/json-format/) | `json_format` | Pretty-print/validate JSON |
 | [daily-digest](modules/daily-digest/) | `daily_digest` | Overdue/high-priority todos, starred notes, recent bookmarks in one summary (`data.read`) |
 | [weather](modules/weather/) | `weather` | Current conditions for a city, via the free open-meteo.com API (`network`) |
+| [currency-convert](modules/currency-convert/) | `convert_currency` | Currency conversion using live ECB exchange rates via Frankfurter (`network`) |
+| [word-lookup](modules/word-lookup/) | `define_word` | English word definitions, pronunciation, and part of speech via DictionaryAPI (`network`) |
+| [tag-explorer](modules/tag-explorer/) | `tag_report` | Cross-collection tag frequency and item lookup across notes, todos, and bookmarks (`data.read`) |
 
 The first five declare `permissions: []` — pure computation, no host access needed.
-`daily-digest` and `weather` are the first two modules in this repo that actually exercise
-the permission-gated host APIs described below.
+`daily-digest` and `tag-explorer` exercise `data.read`; `weather`, `currency-convert`, and `word-lookup` exercise `network`.
 
 ## Host-backed permissions are implemented
 
@@ -77,8 +79,9 @@ the permission-gated host APIs described below.
   module never opens its own socket), response capped at 32,000 characters so one module
   can't blow a whole turn's context budget.
 
-`daily-digest` (`data.read`) and `weather` (`network`) exercise these end to end; the
-original five stay pure computation, needing nothing beyond their own arguments.
+`daily-digest` and `tag-explorer` (`data.read`), alongside `weather`, `currency-convert`, and
+`word-lookup` (`network`) exercise these end to end; the original five stay pure computation,
+needing nothing beyond their own arguments.
 
 ## Add a module
 
